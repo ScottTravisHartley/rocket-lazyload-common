@@ -89,6 +89,46 @@ class Image
         return $html;
     }
 
+    
+    /**
+     * Applies lazyload on background images defined in style attributes
+     *
+     * @param string $html   Original HTML.
+     * @param string $buffer Content to parse.
+     * @return string
+     */
+    public function lazyloadBackgroundListImages($html, $buffer)
+    {
+        if (! preg_match_all('#<li\s+(?<before>[^>]*)style\s*=\s*([\'"])(?<styles>(?:(?!\2).)*?)\2(?<after>[^>]*)>#is', $buffer, $elements, PREG_SET_ORDER)) {
+            return $html;
+        }
+        
+        foreach ($elements as $element) {
+            if ($this->isExcluded($element['before'] . $element['after'], $this->getExcludedAttributes())) {
+                continue;
+            }
+
+            if (! preg_match('#background-image\s*:\s*(?<attr>\s*url\s*\((?<url>[^)]+)\))\s*;?#is', $element['styles'], $url)) {
+                continue;
+            }
+
+            $url['url'] = trim($url['url'], '\'" ');
+
+            if ($this->isExcluded($url['url'], $this->getExcludedSrc())) {
+                continue;
+            }
+
+            $lazy_bg_list = $this->addLazyCLass($element[0]);
+            $lazy_bg_list = str_replace($url[0], '', $lazy_bg_list);
+            $lazy_bg_list = str_replace('<li', '<li data-bg="url(' . esc_attr($url['url']) . ')"', $lazy_bg_list);
+
+            $html = str_replace($element[0], $lazy_bg_list, $html);
+            unset($lazy_bg_list);
+        }
+
+        return $html;
+    }
+    
     /**
      * Add the identifier class to the element
      *
@@ -104,7 +144,7 @@ class Image
             return $element;
         }
 
-        return preg_replace('#<(img|div)([^>]*)>#is', '<\1 class="rocket-lazyload"\2>', $element);
+        return preg_replace('#<(img|div|li)([^>]*)>#is', '<\1 class="rocket-lazyload"\2>', $element);
     }
 
     /**
