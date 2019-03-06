@@ -63,6 +63,10 @@ class Image
             return $html;
         }
 
+        if (! preg_match_all('#<li\s+(?<before>[^>]*)style\s*=\s*([\'"])(?<styles>(?:(?!\2).)*?)\2(?<after>[^>]*)>#is', $buffer, $elements, PREG_SET_ORDER)) {
+            return $html;
+        }
+        
         foreach ($elements as $element) {
             if ($this->isExcluded($element['before'] . $element['after'], $this->getExcludedAttributes())) {
                 continue;
